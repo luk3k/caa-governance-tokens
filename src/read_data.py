@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import json
+import time
 
 import web3.exceptions
 import yaml
@@ -9,6 +10,9 @@ from web3._utils.events import get_event_data
 
 with open('config.yaml') as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
+
+analysis_end_block = 19955500
+block_run_limit = 50_000
 
 
 # connection to the ethereum node
@@ -24,31 +28,79 @@ def conETH(infura_api):
 
 
 # get transaction by hash
-def get_past_logs(w3, topic):
-    try:
-        result = pd.DataFrame()
-        filter = {
-            'fromBlock': 19955165,
-            'toBlock': 19955175,
-            'address': '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
-            'topics': ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"]
-        }
-        logs = w3.eth.get_logs(filter)
-        print(f'logs: {len(logs)}\n + {str(logs)}')
-        for l in logs:
-            filtered_log = {
-                'from': bytes.hex(l['topics'][1]),
-                'to': bytes.hex(l['topics'][2]),
-                'amount': get_uint(bytes.hex(l['data']))
-            }
-            new_df = pd.DataFrame.from_dict(filtered_log)
-            result = pd.concat([result, new_df])
-            print("0x" + bytes.hex(l["transactionHash"]))
+def get_past_logs(w3, address, topic, start_block, file_path):
+    done = False
+    # result = pd.DataFrame()
+    step_size = 100
+    num_of_blocks = 0
 
-        return result
-    except RuntimeError as e:
-        print('Error getting logs: ', e)
-        return None
+    from_block = "earliest" if start_block is None else int(start_block)
+    to_block = analysis_end_block
+    while num_of_blocks < block_run_limit:
+        try:
+            start = time.time_ns()
+            if type(from_block) is not str and from_block >= analysis_end_block:
+                break
+            if to_block > analysis_end_block:
+                to_block = analysis_end_block
+
+            filter = {
+                'fromBlock': from_block,
+                'toBlock': to_block,
+                'address': address,
+                'topics': [topic]
+            }
+
+            print(f"from block: {from_block}; to block: {to_block};")
+            if type(from_block) is not str and type(to_block) is not str:
+                print(f"number of blocks: {to_block - from_block}")
+            logs = w3.eth.get_logs(filter)
+
+            end_request = time.time_ns()
+
+            if type(from_block) is not str and type(to_block) is not str:
+                num_of_blocks = num_of_blocks + (to_block - from_block)
+
+            df = pd.DataFrame()
+
+            print(f'logs: {len(logs)}')
+            for l in logs:
+                filtered_log = {
+                    'tx_hash': [l['transactionHash'].hex()],
+                    'block_number': [l['blockNumber']],
+                    'from': [l['topics'][1].hex()],
+                    'to': [l['topics'][2].hex()],
+                    'amount': [get_uint(l['data'].hex()[2:])]
+                }
+                new_df = pd.DataFrame.from_dict(filtered_log)
+                df = pd.concat([df, new_df])
+
+                # result = pd.concat([result, new_df])
+                # print("0x" + bytes.hex(l["transactionHash"]))
+
+            df.to_csv(file_path, index=False, header=False, mode='a')
+            end_total = time.time_ns()
+
+            print(f'Time for request: {(end_request - start) / 1_000_000} ms')
+            print(f'Time total: {(end_total - start) / 1_000_000} ms')
+            print(f'Total number of bloks: {num_of_blocks}')
+            print('\n')
+
+            from_block = to_block + 1
+            # to_block = analysis_end_block
+            to_block = from_block + step_size
+
+        # ValueError is used to get earliest from_block value
+        except ValueError as ve:
+            print('ValueError: ', ve)
+            from_block = int(ve.args[0]["data"]["from"], 16)
+            # to_block = int(ve.args[0]["data"]["to"], 16)
+            to_block = from_block + step_size
+        except RuntimeError as e:
+            print('Error getting logs: ', e)
+
+    print(f"Last block: {from_block - 1}")
+    # return result
 
 
 def get_uint(data):
@@ -58,72 +110,29 @@ def get_uint(data):
 def get_int(data):
     return int.from_bytes(bytes.fromhex(data), byteorder="big", signed=True)
 
+
 def split_data(data):
     return [data[i:i + 64] for i in range(2, len(data), 64)]
 
-def get_transfers(w3, tx_hash):
-    try:
-        logs = w3.eth.get_transaction_receipt(tx_hash).logs
-
-        # ---- implement this part ----
-
-        # logs_filtered = # .... filter logs for the Uniswap V3 swap event from wETH-USDC pool
-        # swap_event = logs_filtered[0] # ... get the first swap event
-
-        # return {
-        #     "amount0": int(0),  # ... amount of token0 sent to the contract
-        #     "amount1": int(0),  # ... amount of token1 sent to the contract
-        #     "sqrtPriceX96": int(0),  # ... price representation
-        # }
-
-        # ----------------------------
-
-        uniswap_topic = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'
-        logs_filtered = list(filter(lambda log: uniswap_topic in list(map(lambda t: t.hex(), log['topics'])), logs))
-        transfer_event = logs_filtered[0]
-        event_abi = """
-        [{
-            "anonymous": false,
-            "inputs": [
-                {
-                    "type": "address",
-                    "name": "from",
-                    "indexed": true
-                },
-                {
-                    "type": "address",
-                    "name": "to",
-                    "indexed": true
-                },
-                {
-                    "type": "uint256",
-                    "name": "amount",
-                    "indexed": false
-                }
-            ],
-            "name": "Transfer",
-            "type": "event"
-        }]"""
-        transfer_event_abi = w3.eth.contract(abi=event_abi)
-        evt = get_event_data(w3.codec, transfer_event_abi.events.Swap._get_event_abi(), transfer_event)
-        return {
-            'amount0': evt['args']['amount0'],
-            'amount1': evt['args']['amount1'],
-            'sqrtPriceX96': evt['args']['sqrtPriceX96'],
-        }
-    except web3.exceptions.TransactionNotFound:
-        return None
-
 
 def main(args):
+    start_time = time.time()
     if args.topic is None:
         print('Error: topic not specified')
+    if args.address is None:
+        print('Error: address not specified')
+
+    # init csv headers
+    if args.start_block is None:
+        with open(args.output, 'w') as f:
+            f.write("tx_hash,block_number,from,to,amount\n")
+
     # connect to the Ethereum node
-    if config["keys"]["infura_api"] is not None:
-        eth_con = conETH(config["keys"]["infura_api"])
+    if config["keys"]["infura_apikey"] is not None:
+        eth_con = conETH(config["keys"]["infura_apikey"])
         # make the query
         if eth_con is not None:
-            result = get_past_logs(eth_con, args.topic)
+            get_past_logs(eth_con, args.address, args.topic, start_block=args.start_block, file_path=args.output)
         else:
             print("Error: connection to the ethereum node failed")
             return
@@ -131,18 +140,23 @@ def main(args):
         print("Error: infura api key not found")
         return
 
+    end_time = time.time()
+    print(f"Total time: {end_time - start_time} s")
     # save the result into a JSON file
-    if args.output is not None:
-        # with open(args.output, 'w') as f:
-        #     json.dump(result, f)
-        print(result)
-    else:
-        print("Error: no output defined")
-        return
+    # if args.output is not None and result is not None:
+    #     result.to_csv(args.output, index=False)
+    #     # print(result)
+    # else:
+    #     print("Error: no output defined")
+    #     return
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
+    parser.add_argument('-a', '--address',
+                        help='Filter for the contract address', type=str, required=True)
+    parser.add_argument('--start-block',
+                        help='Start block for the filter operation', type=str, required=False)
     parser.add_argument('-t', '--topic',
                         help='Filter for the given topic', type=str, required=True)
     parser.add_argument('-o', '--output',
