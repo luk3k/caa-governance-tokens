@@ -1,0 +1,30 @@
+Info: output.csv length was checked for each run: 21386
+
+analysis_end_block_test_multi_threading = 19955500
+analysis_start_block_test_multi_threading = 19900000
+end - start = 55500 blocks
+
+Tests (55500 blocks):
+- 1 thread (step_size: 100)
+  Total time: 126.5378201007843 s
+
+- 2 threads (step_size: 100)
+  Total time: 60.44596481323242 s
+
+- 3 threads (step_size: 300)
+  Total time: 26.54773187637329 s
+
+- 3 threads (step_size: 500) 
+  Total time: 20.93128991127014 s
+
+- 4 threads (step_size: 400)
+  Total time: 33.77512001991272 s
+
+- 6 threads (step_size: 100)
+  Total time: 56.078041076660156 s
+
+- 6 threads (step_size: 200)
+  Total time: 33.77512001991272 s
+
+- 6 threads (step_size: 500)
+  Total time: 23.781535387039185 s
