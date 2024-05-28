@@ -4,8 +4,6 @@ import threading
 from argparse import ArgumentParser
 import json
 import time
-
-import web3.exceptions
 import yaml
 import pandas as pd
 from web3 import Web3
@@ -17,14 +15,26 @@ with open('config.yaml') as f:
 
 analysis_end_block = 19955500
 analysis_start_block = 10861674 # uniswap first block with logs
+# end - start = 9093826 blocks
 
+# --- test block ranges
+# - small range
 analysis_end_block_test_multi_threading = 19955500
-analysis_start_block_test_multi_threading = 19900000 # end - start = 55500 blocks
-analysis_block_range_test_multi_threading = (analysis_end_block_test_multi_threading - analysis_start_block_test_multi_threading)
-block_run_limit = 50_000
+analysis_start_block_test_multi_threading = 19900000
+# end - start = 55500 blocks
 
-nThreads = 3
-step_size = 200
+# --- test block range from sunday (170,5 MB file)
+# analysis_end_block_test_multi_threading = 10966308
+# analysis_start_block_test_multi_threading = 10861674
+
+# analysis_end_block_test_multi_threading = analysis_end_block
+# analysis_start_block_test_multi_threading = analysis_start_block
+analysis_block_range_test_multi_threading = (analysis_end_block_test_multi_threading - analysis_start_block_test_multi_threading)
+
+num_value_errors = 0
+block_run_limit = 50_000
+nThreads = 2
+step_size = 100 # 200 result in a value error for some requests
 
 # connection to the ethereum node
 def conETH(infura_api):
@@ -69,6 +79,10 @@ def get_past_logs_threaded(w3, address, topic, file_path, num_threads):
     # wait for threads to finish
     for i in range(num_threads):
         threads[i].join()
+
+    print(f"number of value errors: {num_value_errors}")
+    if num_value_errors > 0:
+        print("\n!!\n!!\n!! WARNING: there have been ValueErrors: output is incorrect! \n!!\n!!")
 
     # merge tmp csv files
     merge_csv_files(tmp_files, file_path)
@@ -116,6 +130,7 @@ def perform_get_logs_with_too_many_requests_protection(w3, filter, thread_num):
 
 # each thread calls this function
 def get_past_logs_thread(w3, address, topic, file_path, start_block, end_block, thread_num):
+    global num_value_errors
     num_of_blocks = 0
 
     from_block = start_block
@@ -170,12 +185,11 @@ def get_past_logs_thread(w3, address, topic, file_path, start_block, end_block, 
         # ValueError is used to get earliest from_block value
         except ValueError as ve:
             print('ValueError: ', ve)
+            num_value_errors = num_value_errors + 1
             break
         except RuntimeError as e:
             print('Error getting logs: ', e)
             break
-
-    print(f"Last block: {from_block - 1}")
 
 
 # get transaction by hash
