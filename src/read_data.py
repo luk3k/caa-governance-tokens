@@ -19,8 +19,8 @@ analysis_start_block = 10861674 # uniswap first block with logs
 
 # --- test block ranges
 # - small range
-analysis_end_block_test_multi_threading = 19955500
-analysis_start_block_test_multi_threading = 19900000
+# analysis_end_block_test_multi_threading = 19955500
+# analysis_start_block_test_multi_threading = 19900000
 # end - start = 55500 blocks
 
 # --- test block range from sunday (170,5 MB file)
@@ -29,11 +29,20 @@ analysis_start_block_test_multi_threading = 19900000
 
 # analysis_end_block_test_multi_threading = analysis_end_block
 # analysis_start_block_test_multi_threading = analysis_start_block
+
+# Uniswap
+# - first half
+# analysis_end_block_test_multi_threading = 15408587
+# analysis_start_block_test_multi_threading = 10861674
+# - second half
+analysis_end_block_test_multi_threading = 19955500
+analysis_start_block_test_multi_threading = 15408588
+
 analysis_block_range_test_multi_threading = (analysis_end_block_test_multi_threading - analysis_start_block_test_multi_threading)
 
 num_value_errors = 0
 block_run_limit = 50_000
-nThreads = 2
+nThreads = 8
 step_size = 100 # 200 result in a value error for some requests
 
 # connection to the ethereum node
