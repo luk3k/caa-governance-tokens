@@ -19,9 +19,8 @@ Second half: From 15408588 to 19955500
   - so we further divide it:
 
 Third/fourth: From 15408588 to 17682044
-- Test run 
-  - 8 threads 
-  - start: 16:55
-  - end: 
+- number of value errors: 0
+- Total time: 2137.188544034958 s
+- done
 
 Fourth/fourth: From 17682045 to 19955500
