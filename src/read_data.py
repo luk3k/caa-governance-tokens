@@ -2,43 +2,16 @@ import csv
 import os
 import threading
 from argparse import ArgumentParser
-import json
 import time
 import yaml
 import pandas as pd
 from web3 import Web3
-from web3._utils.events import get_event_data
 from requests.exceptions import HTTPError
 
 with open('config.yaml') as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
-analysis_end_block = 19955500
-analysis_start_block = 10861674 # uniswap first block with logs
-# end - start = 9093826 blocks
-
-# --- test block ranges
-# - small range
-# analysis_end_block_test_multi_threading = 19955500
-# analysis_start_block_test_multi_threading = 19900000
-# end - start = 55500 blocks
-
-# --- test block range from sunday (170,5 MB file)
-# analysis_end_block_test_multi_threading = 10966308
-# analysis_start_block_test_multi_threading = 10861674
-
-# analysis_end_block_test_multi_threading = analysis_end_block
-# analysis_start_block_test_multi_threading = analysis_start_block
-
-# Uniswap
-# - first half
-# analysis_end_block_test_multi_threading = 15408587
-# analysis_start_block_test_multi_threading = 10861674
-# - second half
-analysis_end_block_test_multi_threading = 19955500
-analysis_start_block_test_multi_threading = 15408588
-
-analysis_block_range_test_multi_threading = (analysis_end_block_test_multi_threading - analysis_start_block_test_multi_threading)
+# analysis_end_block = 19955500
 
 num_value_errors = 0
 block_run_limit = 50_000
@@ -57,29 +30,23 @@ def conETH(infura_api):
         return None
 
 # work is distributed to threads
-def get_past_logs_threaded(w3, address, topic, file_path, num_threads):
+def get_past_logs_threaded(w3, address, topic, file_path, num_threads, start_block, end_block):
+
     tmp_files = [file_path.split(".")[0] + "_" + str(i) + ".csv" for i in range(num_threads)]
     threads = []
 
-    # --- thread block range allocation example ---
-    # start block: 19900000
-    # end block: 19955500
-    # diff: 55500
-    #
-    # thread 1 part: 19900000 - 19927749
-    # thread 2 part: 19927750 - 19955500
-    
-    thread_block_rate = analysis_block_range_test_multi_threading/num_threads
+    block_range = end_block - start_block
+    thread_block_rate = block_range/num_threads
 
     for i in range(num_threads):
-        start_block = int(analysis_start_block_test_multi_threading + i * thread_block_rate)
-        end_block = int(analysis_start_block_test_multi_threading + (i+1) * thread_block_rate - 1)
+        _start_block = int(start_block + i * thread_block_rate)
+        _end_block = int(start_block + (i+1) * thread_block_rate - 1)
 
         if (i == num_threads - 1):
             end_block = end_block + 1   # add one more for the last thread range:
 
-        print(f"thread {i}: start block: {start_block}, end block: {end_block})")
-        threads.append(threading.Thread(target=get_past_logs_thread, args=(w3, address, topic, tmp_files[i], start_block, end_block, i)))
+        print(f"thread {i}: start block: {_start_block}, end block: {_end_block})")
+        threads.append(threading.Thread(target=get_past_logs_thread, args=(w3, address, topic, tmp_files[i], _start_block, _end_block, i)))
 
     # start threads
     for i in range(num_threads):
@@ -201,6 +168,7 @@ def get_past_logs_thread(w3, address, topic, file_path, start_block, end_block, 
             break
 
 
+# old function
 # get transaction by hash
 def get_past_logs(w3, address, topic, start_block, end_block, file_path):
     done = False
@@ -292,13 +260,21 @@ def get_int(data):
 def split_data(data):
     return [data[i:i + 64] for i in range(2, len(data), 64)]
 
-# run with: -a 0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/output.csv
 def main(args):
+    start_block = int(args.start_block)
+    end_block = int(args.end_block)
+
+    if start_block is None or end_block is None:
+        print('Error: start block and end block must be specified')
+
     start_time = time.time()
     if args.topic is None:
         print('Error: topic not specified')
     if args.address is None:
         print('Error: address not specified')
+
+    if args.output is None:
+        print('Error: no output file specified')
 
     # --- old code for get_past_logs ---
     # # init csv headers
@@ -316,7 +292,7 @@ def main(args):
             # get_past_logs(eth_con, args.address, args.topic, analysis_start_block_testing, analysis_end_block, file_path=args.output)
             # ---
 
-            get_past_logs_threaded(eth_con, args.address, args.topic, args.output, nThreads)
+            get_past_logs_threaded(eth_con, args.address, args.topic, args.output, nThreads, start_block, end_block)
         else:
             print("Error: connection to the ethereum node failed")
             return
@@ -326,13 +302,6 @@ def main(args):
 
     end_time = time.time()
     print(f"Total time: {end_time - start_time} s")
-    # save the result into a JSON file
-    # if args.output is not None and result is not None:
-    #     result.to_csv(args.output, index=False)
-    #     # print(result)
-    # else:
-    #     print("Error: no output defined")
-    #     return
 
 
 if __name__ == '__main__':
@@ -340,7 +309,9 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--address',
                         help='Filter for the contract address', type=str, required=True)
     parser.add_argument('--start-block',
-                        help='Start block for the filter operation', type=str, required=False)
+                        help='Start block for the filter operation', type=str, required=True)
+    parser.add_argument('--end-block',
+                        help='End block for the filter operation', type=str, required=True)
     parser.add_argument('-t', '--topic',
                         help='Filter for the given topic', type=str, required=True)
     parser.add_argument('-o', '--output',
