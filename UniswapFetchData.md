@@ -24,3 +24,6 @@ Third/fourth: From 15408588 to 17682044
 - done
 
 Fourth/fourth: From 17682045 to 19955500
+- done
+
+Final file: `outputUniswap_fromBlock_10861674_toBlock_19955500.csv`

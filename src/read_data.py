@@ -98,8 +98,8 @@ def perform_get_logs_with_too_many_requests_protection(w3, filter, thread_num):
                 time.sleep(sleeping_time)
                 sleeping_time *= 2
 
-            time.sleep(sleeping_time)
-            sleeping_time *= 2
+            # time.sleep(sleeping_time)
+            # sleeping_time *= 2
             continue
         done = True
     return result
