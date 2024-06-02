@@ -1,5 +1,7 @@
 #!/usr/bin/python
 from argparse import ArgumentParser
+from decimal import Decimal
+
 import pandas as pd
 
 def analyze_data(file, out):
@@ -7,7 +9,7 @@ def analyze_data(file, out):
     pd.set_option('float_format', '{:f}'.format)
 
     df = pd.read_csv(file)
-    df["amount"] = df["amount"].astype(float)
+    df["amount"] = df["amount"].apply(Decimal)
 
     print("unique columns: ", df.nunique())
 
@@ -28,10 +30,8 @@ def analyze_data(file, out):
     # print(to_group)
     # print(from_group)
     print(df_total)
-    # df_total.to_csv(out)
+    df_total.to_csv(out)
     print(df_total_negativeBalance)
-
-
 
 
 def main(args):
