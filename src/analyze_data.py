@@ -4,6 +4,9 @@ from decimal import Decimal
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
+from preprocess_data import create_balance_df
+
+pd.options.display.max_colwidth = 68
 
 
 def create_pie_chart(df):
@@ -21,14 +24,52 @@ def create_bar_chart(df):
     plt.barh(addresses, data)
     plt.savefig("data/uniswap_bar_chart.png")
 
+
+def print_top_percentages(df):
+    sum = df["balance"].sum()
+
+    top_10_balance = (df.iloc[:10])["balance"].sum()
+    top_10_percentage = top_10_balance/sum
+    print(f"Top 10 percentage: {round(top_10_percentage * 100, 2)}%\n")
+
+    top_100_balance = (df.iloc[:100])["balance"].sum()
+    top_100_percentage = top_100_balance/sum
+    print(f"Top 100 percentage: {round(top_100_percentage * 100, 2)}%\n")
+
+    top_1000_balance = (df.iloc[:1000])["balance"].sum()
+    top_1000_percentage = top_1000_balance/sum
+    print(f"Top 1000 percentage: {round(top_1000_percentage * 100, 2)}%\n")
+
+
+def print_top_traders(df):
+    top_receivers = df.sort_values(by="amount_in", ascending=False).iloc[:10]
+    top_senders = df.sort_values(by="amount_out", ascending=False).iloc[:10]
+    print(f"Top senders: {top_senders}\n")
+    print(f"Top receivers: {top_receivers}\n")
+
+
+def print_tokens_per_block(file):
+    with open(file, mode='r') as f1:
+        lines = f1.readlines()
+        row_count = len(lines) - 1
+        start_block = int(lines[1].split(',')[1])
+        end_block = int(lines[-1].split(',')[1])
+
+    r = end_block - start_block
+    tx_per_block = r/row_count
+
+    print(f"Token transfers per block: {round(tx_per_block, 2)}\n")
+
+
 # https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
 def compute_herfindahl_hirschman_index(df):
     # TODO
-    pass
+    return "TODO"
+
 
 def compute_gini_index(df):
     balances = df["balance"].to_numpy()
-    print("gini index: ", gini(balances))
+    return gini(balances)
 
 
 # gini index info: lies between 0 (max equality) and 1 (max inequality)
@@ -56,26 +97,83 @@ def merge_others_at_cut_off_value(df, cut_point):
     return pd.concat([df_prepared, row], ignore_index=True)
 
 
-def main(args):
-    if args.file is None:
-        print('Error: Please specify the file to analyze')
+def create_gini_timeline(file_original, start, end, step_size):
+    # TODO: Maybe remove top address
+    gini_indices = []
+    for block in range(start+step_size, end, step_size):
+        df = create_balance_df(file_original, block)
+        gini_indices.append({
+            "gini_index": compute_gini_index(df),
+            "block_number": block
+        })
+    return gini_indices
 
-    df = pd.read_csv(args.file)
+def create_timeline_plot():
+    pass
+    # TODO
+
+def main(args):
+    if args.file_balances is None or args.file_original is None:
+        print('Error: Please specify the two files required for analysis')
+
+    df = pd.read_csv(args.file_balances)
     df["balance"] = df["balance"].apply(Decimal)
     df["amount_in"] = df["amount_in"].apply(Decimal)
     df["amount_out"] = df["amount_out"].apply(Decimal)
 
     cleaned_df = clean_data(df)
     processed_df = merge_others_at_cut_off_value(cleaned_df, 20)
+
+    # --------- compute metrics
+
+    # ----- How are governance tokens distributed?
+
+    # gini coefficient
+    #gini_index = compute_gini_index(cleaned_df)
+    #print("gini index: ", gini_index)
+
+    # TODO: maybe: herfindahl hirschman index
+    hh_index = compute_herfindahl_hirschman_index(cleaned_df)
+    print("hh index: ", hh_index)
+
+    # Percentage of tokens held by
+    # - top 10
+    # - top 100
+    # - top 1000
+    # print_top_percentages(cleaned_df)
+
+    # ----- Who and how often trades them?
+
+    # min, max and avg of total number of sent tokens
+    # top 10 token senders
+    # top 10 token receivers
+    # print_top_traders(cleaned_df)
+
+    # tokens sent per block
+    # print_tokens_per_block(args.file_original)
+
+    # min, max and avg transaction frequencies
+
+    # ----- What fraction is held by CEXs, and what by users?
+
+    # graphs
     create_pie_chart(processed_df)
     create_bar_chart(processed_df)
-    compute_gini_index(cleaned_df)
+
+    # analysis of CEX addresses
+
+    # ----- Timeline analysis
+    # gini index every n_timeline blocks
+    gini_indices = create_gini_timeline(args.file_original, 10861674, 19955500, 100_000)
+    print("gini indices: ", gini_indices)
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--file',
-                        help='Path for file', type=str, required=True)
+    parser.add_argument('--file-original',
+                        help='Path for original file of all transfers logs', type=str, required=True)
+    parser.add_argument('--file-balances',
+                        help='Path for file that contains the balances', type=str, required=True)
     # parser.add_argument('--out', '-o',
     #                     help='Path for output file', type=str, required=True)
 
