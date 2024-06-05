@@ -1,7 +1,9 @@
+import random
 from argparse import ArgumentParser
 from decimal import Decimal
 
 from matplotlib import pyplot as plt
+from matplotlib import colors as mcolors
 import pandas as pd
 import numpy as np
 from preprocess_data import create_balance_df
@@ -9,20 +11,28 @@ from preprocess_data import create_balance_df
 pd.options.display.max_colwidth = 68
 
 
-def create_pie_chart(df):
+def create_pie_chart(df, output_path):
     plt.figure()
     data = df["balance"].to_numpy()
-    addresses = df["address"]
-    plt.pie(data, labels=addresses)
-    plt.savefig("data/uniswap_pie_chart.png")
+    addresses = df["address"].apply(lambda x: x.replace("000000000000000000000000", "")).apply(lambda x: x[0:7])
+    colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(addresses))
+    wedges, texts = plt.pie(data,
+            labels=addresses,
+            colors=colors)
+    # plt.legend(wedges, addresses,
+    #            loc="center left",
+    #            bbox_to_anchor=(1.04, 0.5),
+    #            borderaxespad=0)
+
+    plt.savefig(output_path)
 
 
-def create_bar_chart(df):
+def create_bar_chart(df, output_path):
     plt.figure()
     addresses = df["address"]
     data = df["balance"].to_numpy()
     plt.barh(addresses, data)
-    plt.savefig("data/uniswap_bar_chart.png")
+    plt.savefig(output_path)
 
 
 def print_top_percentages(df):
@@ -122,7 +132,8 @@ def main(args):
     df["amount_out"] = df["amount_out"].apply(Decimal)
 
     cleaned_df = clean_data(df)
-    processed_df = merge_others_at_cut_off_value(cleaned_df, 20)
+    processed_df = merge_others_at_cut_off_value(cleaned_df, 50)
+    processed_df_cutPoint100 = merge_others_at_cut_off_value(cleaned_df, 100)
 
     # --------- compute metrics
 
@@ -150,22 +161,26 @@ def main(args):
     # print_top_traders(cleaned_df)
 
     # tokens sent per block
-    # print_tokens_per_block(args.file_original)
+    print_tokens_per_block(args.file_original)
 
     # min, max and avg transaction frequencies
 
     # ----- What fraction is held by CEXs, and what by users?
 
     # graphs
-    create_pie_chart(processed_df)
-    create_bar_chart(processed_df)
+    create_pie_chart(processed_df, "../data/uniswap_pie_chart.png")
+    create_pie_chart(processed_df_cutPoint100, "../data/uniswap_pie_chart_cutPoint100.png")
+
+    # create_pie_chart(processed_df.drop(index=0), "../data/uniswap_pie_chart_withoutTopHolder.png") # without top balance holder
+
+    create_bar_chart(processed_df, "../data/uniswap_bar_chart.png")
 
     # analysis of CEX addresses
 
     # ----- Timeline analysis
     # gini index every n_timeline blocks
-    gini_indices = create_gini_timeline(args.file_original, 10861674, 19955500, 100_000)
-    print("gini indices: ", gini_indices)
+    # gini_indices = create_gini_timeline(args.file_original, 10861674, 19955500, 100_000)
+    # print("gini indices: ", gini_indices)
 
 
 if __name__ == '__main__':
