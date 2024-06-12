@@ -12,7 +12,7 @@ def create_balance_df(file, end_block=19955500):
     df = df[df["block_number"] <= end_block]
     print("unique columns: ", df.nunique())
 
-    df_total = compute_address_balances(df)
+    df_total = compute_address_balances(df, end_block)
     return df_total
 
 
