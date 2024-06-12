@@ -16,7 +16,9 @@ def create_balance_df(file, end_block=19955500):
     return df_total
 
 
-def compute_address_balances(df):
+def compute_address_balances(df, at=None):
+    if at is not None:
+        df = df[df["block_number"] <= at]
     to_group = df.groupby(['to']).agg({'amount': 'sum'})
     to_group.index.names = ['address']
     # print("to unique: ", to_group.nunique())
