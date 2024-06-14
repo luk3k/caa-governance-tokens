@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 import pandas as pd
 import numpy as np
-from preprocess_data import create_balance_df, compute_address_balances
+from preprocess_data import compute_address_balances, clean_data, remove_zero_balances, remove_address
 
 pd.options.display.max_colwidth = 68
 
@@ -35,27 +35,41 @@ def create_bar_chart(df, output_path):
     plt.savefig(output_path)
 
 
+def print_cex_percentages(df):
+    sum = df["balance"].sum()
+
+    df_cex_not_none = df[~pd.isnull(df["cex"])]
+    df_cex_is_none = df[pd.isnull(df["cex"])]
+
+    cex_sum = df_cex_not_none["balance"].sum()
+    others_sum = df_cex_is_none["balance"].sum()
+
+    print(f"All cex together hold {cex_sum} out of {sum} ({round((cex_sum / sum) * 100, 2)} %) tokens")
+    print(f"Other addresses hold {others_sum} out of {sum} ({round((others_sum / sum) * 100, 2)} %) tokens")
+
+
 def print_top_percentages(df):
+    df = df.sort_values(by=["balance"], ascending=False)
     sum = df["balance"].sum()
 
     top_10_balance = (df.iloc[:10])["balance"].sum()
     top_10_percentage = top_10_balance/sum
-    print(f"Top 10 percentage: {round(top_10_percentage * 100, 2)}%\n")
+    print(f"Top 10 percentage: {round(top_10_percentage * 100, 2)}%")
 
     top_100_balance = (df.iloc[:100])["balance"].sum()
     top_100_percentage = top_100_balance/sum
-    print(f"Top 100 percentage: {round(top_100_percentage * 100, 2)}%\n")
+    print(f"Top 100 percentage: {round(top_100_percentage * 100, 2)}%")
 
     top_1000_balance = (df.iloc[:1000])["balance"].sum()
     top_1000_percentage = top_1000_balance/sum
-    print(f"Top 1000 percentage: {round(top_1000_percentage * 100, 2)}%\n")
+    print(f"Top 1000 percentage: {round(top_1000_percentage * 100, 2)}%")
 
 
 def print_top_traders(df):
     top_receivers = df.sort_values(by="amount_in", ascending=False).iloc[:10]
     top_senders = df.sort_values(by="amount_out", ascending=False).iloc[:10]
-    print(f"Top senders: {top_senders}\n")
-    print(f"Top receivers: {top_receivers}\n")
+    print(f"Top senders: {top_senders[['address', 'balance', 'cex']]}")
+    print(f"Top receivers: {top_receivers[['address', 'balance', 'cex']]}\n")
 
 
 def print_tokens_per_block(file):
@@ -72,9 +86,17 @@ def print_tokens_per_block(file):
 
 
 # https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
-def compute_herfindahl_hirschman_index(df):
-    # TODO
-    return "TODO"
+# measures the maket concentration: lower degree means closer to perfect distribution, higher degree means monopol
+def compute_herfindahl_hirschman_index(df, top_n_player=None):
+    if top_n_player is None:
+        top_n_player = df.shape[0]
+    # df must be sorted!
+    balances = df["balance"].to_numpy()
+    total = balances.sum()
+    hhi_elements = [(value / total) ** 2 for value in balances[:top_n_player]]
+    hhi = sum(hhi_elements)
+    return hhi
+
 
 
 def compute_gini_index(df):
@@ -95,20 +117,6 @@ def gini(x):
     # gini = float((2 * np.sum(index * x)) / (n * np.sum(x))) - ((n+1)/n)
     return ((np.sum((2 * index - n  - 1) * x)) / (n * np.sum(x)))
 
-# remove negative values
-def clean_data(df):
-    non_negative_balances = df.loc[df["balance"] >= 0]
-    return non_negative_balances.sort_values(by=["balance"], ascending=False)
-
-def remove_zero_balances(df):
-    non_zero_balances = df.loc[df["balance"] != 0]
-    return non_zero_balances
-
-def remove_address(df: pd.DataFrame, address):
-    if address is not None:
-        result = df.loc[df["address"] != address] #df.drop(index=address)
-        return result
-    return None
 
 def merge_others_at_cut_off_value(df, cut_point):
     df_prepared = df.head(cut_point)
@@ -135,7 +143,7 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
         # clean
         non_negative_df = clean_data(df_balances)
         only_positive_df = remove_zero_balances(non_negative_df)
-        only_positive_df_removed_timelockAddress = remove_address(only_positive_df, "0x0000000000000000000000001a9c8182c09f50c8318d769245bea52c32be35bc")
+        only_positive_df_removed_timelockAddress = remove_address(only_positive_df, "0x1a9c8182c09f50c8318d769245bea52c32be35bc")
 
         print(f"[Gini][Timeline][Block {block}]: Calculating gini ...")
         gini_index = compute_gini_index(only_positive_df_removed_timelockAddress)
