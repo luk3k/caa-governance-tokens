@@ -179,6 +179,29 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
 def create_timeline_plot(data):
     data.plot(x='block_number', y='gini_index', kind='line')
 
+
+def get_top_by_balances(data, n):
+    df = data.sort_values(by="balance", ascending=False)
+    return df.head(n)
+
+
+def create_balance_cdf_plot(data):
+    df = pd.DataFrame(data)
+    df.sort_values(by="balance", ascending=True, inplace=True)
+    df["balance"] = df["balance"].astype(float)
+    df["cumulative_sum"] = df["balance"].cumsum()
+
+    fig, axs = plt.subplots(figsize=(12, 4))
+    df.plot(x="address", y="cumulative_sum", kind="line", ax=axs)
+
+    axs.set_xlabel("Address")
+    axs.set_ylabel("cdf")
+    axs.set_xticks([])
+    axs.set_yticks([])
+    plt.show()
+
+
+
 # def main(args):
 #     if args.file_balances is None or args.file_original is None:
 #         print('Error: Please specify the two files required for analysis')
