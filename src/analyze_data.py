@@ -11,14 +11,17 @@ from preprocess_data import compute_address_balances, clean_data, remove_zero_ba
 pd.options.display.max_colwidth = 68
 
 
-def create_pie_chart(df, output_path):
+def create_pie_chart(df, output_path, labels=None):
     plt.figure()
     data = df["balance"].to_numpy()
-    addresses = df["address"].apply(lambda x: x.replace("000000000000000000000000", "")).apply(lambda x: x[0:7])
-    colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(addresses))
+    if labels is None:
+        addresses = df["address"].apply(lambda x: x.replace("000000000000000000000000", "")).apply(lambda x: x[0:7])
+        labels = addresses
+
+    colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(labels))
     wedges, texts = plt.pie(data,
-            labels=addresses,
-            colors=colors)
+                            labels=labels,
+                            colors=colors)
     # plt.legend(wedges, addresses,
     #            loc="center left",
     #            bbox_to_anchor=(1.04, 0.5),
@@ -48,20 +51,32 @@ def print_cex_percentages(df):
     print(f"Other addresses hold {others_sum} out of {sum} ({round((others_sum / sum) * 100, 2)} %) tokens")
 
 
+def aggregate_cex_balances(df):
+    """
+    Returns a dataframe containing only central exchanges with their total balances.
+    :param df: the dataframe to operate on
+    :return: a new df containing only central exchanges with their total balances.
+    """
+    df_cex = df[~pd.isnull(df["cex"])]
+    group = df_cex.groupby(['cex']).agg({'balance': 'sum'})
+    group.index.names = ['cex']
+    return group.reset_index()
+
+
 def print_top_percentages(df):
     df = df.sort_values(by=["balance"], ascending=False)
     sum = df["balance"].sum()
 
     top_10_balance = (df.iloc[:10])["balance"].sum()
-    top_10_percentage = top_10_balance/sum
+    top_10_percentage = top_10_balance / sum
     print(f"Top 10 percentage: {round(top_10_percentage * 100, 2)}%")
 
     top_100_balance = (df.iloc[:100])["balance"].sum()
-    top_100_percentage = top_100_balance/sum
+    top_100_percentage = top_100_balance / sum
     print(f"Top 100 percentage: {round(top_100_percentage * 100, 2)}%")
 
     top_1000_balance = (df.iloc[:1000])["balance"].sum()
-    top_1000_percentage = top_1000_balance/sum
+    top_1000_percentage = top_1000_balance / sum
     print(f"Top 1000 percentage: {round(top_1000_percentage * 100, 2)}%")
 
 
@@ -80,7 +95,7 @@ def print_tokens_per_block(file):
         end_block = int(lines[-1].split(',')[1])
 
     r = end_block - start_block
-    tx_per_block = r/row_count
+    tx_per_block = r / row_count
 
     print(f"Token transfers per block: {round(tx_per_block, 2)}\n")
 
@@ -98,10 +113,10 @@ def compute_herfindahl_hirschman_index(df, top_n_player=None):
     return hhi
 
 
-
 def compute_gini_index(df):
     balances = df["balance"].to_numpy()
     return gini(balances)
+
 
 # https://lifewithdata.com/2023/05/24/how-to-calculate-the-gini-coefficient-in-python/
 def gini(x):
@@ -115,7 +130,7 @@ def gini(x):
 
     # alternative (same as in wikipedia)
     # gini = float((2 * np.sum(index * x)) / (n * np.sum(x))) - ((n+1)/n)
-    return ((np.sum((2 * index - n  - 1) * x)) / (n * np.sum(x)))
+    return ((np.sum((2 * index - n - 1) * x)) / (n * np.sum(x)))
 
 
 def merge_others_at_cut_off_value(df, cut_point):
@@ -134,7 +149,7 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
     start_block = df.iloc[0]["block_number"]
     end_block = df.iloc[-1]["block_number"]
     gini_indices = []
-    for block in range(start_block+step_size, end_block, step_size):
+    for block in range(start_block + step_size, end_block, step_size):
         print(f"[Gini][Timeline][Block {block}]: Calculating balances ...")
         df_balances = compute_address_balances(df, block)
 
@@ -143,7 +158,8 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
         # clean
         non_negative_df = clean_data(df_balances)
         only_positive_df = remove_zero_balances(non_negative_df)
-        only_positive_df_removed_timelockAddress = remove_address(only_positive_df, "0x1a9c8182c09f50c8318d769245bea52c32be35bc")
+        only_positive_df_removed_timelockAddress = remove_address(only_positive_df,
+                                                                  "0x1a9c8182c09f50c8318d769245bea52c32be35bc")
 
         print(f"[Gini][Timeline][Block {block}]: Calculating gini ...")
         gini_index = compute_gini_index(only_positive_df_removed_timelockAddress)
@@ -159,8 +175,9 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
         gini_df.to_csv(file_output)
     return gini_df
 
+
 def create_timeline_plot(data):
-    data.plot()
+    data.plot(x='block_number', y='gini_index', kind='line')
 
 # def main(args):
 #     if args.file_balances is None or args.file_original is None:
