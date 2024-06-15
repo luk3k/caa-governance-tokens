@@ -95,7 +95,7 @@ def print_tokens_per_block(file):
         end_block = int(lines[-1].split(',')[1])
 
     r = end_block - start_block
-    tx_per_block = r / row_count
+    tx_per_block = row_count / r
 
     print(f"Token transfers per block: {round(tx_per_block, 2)}\n")
 
@@ -142,15 +142,17 @@ def merge_others_at_cut_off_value(df, cut_point):
     return pd.concat([df_prepared, row], ignore_index=True)
 
 
-def create_and_export_gini_timeline(file_original, step_size, file_output=None):
+def create_and_export_timeline(file_original, step_size, file_output=None):
     df = pd.read_csv(file_original)
     df["amount"] = df["amount"].apply(Decimal)
 
     start_block = df.iloc[0]["block_number"]
     end_block = df.iloc[-1]["block_number"]
     gini_indices = []
+    txs_per_block = []
+    prev_block = start_block - 1
     for block in range(start_block + step_size, end_block, step_size):
-        print(f"[Gini][Timeline][Block {block}]: Calculating balances ...")
+        print(f"[Timeline][Block {block}]: Calculating balances ...")
         df_balances = compute_address_balances(df, block)
 
         df_balances = df_balances.reset_index()
@@ -161,23 +163,31 @@ def create_and_export_gini_timeline(file_original, step_size, file_output=None):
         only_positive_df_removed_timelockAddress = remove_address(only_positive_df,
                                                                   "0x1a9c8182c09f50c8318d769245bea52c32be35bc")
 
-        print(f"[Gini][Timeline][Block {block}]: Calculating gini ...")
+        print(f"Timeline][Block {block}]: Calculating gini ...")
         gini_index = compute_gini_index(only_positive_df_removed_timelockAddress)
-        gini_indices.append({
-            "gini_index": gini_index,
-            "block_number": block
-        })
-        print(f"[Gini][Timeline][Block {block}]: Done calculating: {gini_index}")
+        gini_indices.append(gini_index)
+        print(f"[Timeline][Block {block}]: Done calculating gini: {gini_index}")
 
-    print(f"[Gini][Timeline]: Done")
-    gini_df = pd.DataFrame.from_records(gini_indices, index="block_number")
+        print(f"Timeline][Block {block}]: Calculating tx per block ...")
+        tx_per_block = df[(df['block_number'] > prev_block) & (df['block_number'] <= block)].shape[0] / (block - prev_block)
+        txs_per_block.append(tx_per_block)
+        print(f"Timeline][Block {block}]: Done Calculating tx per block: {tx_per_block}")
+        prev_block = block
+
+    print(f"[Timeline]: Done")
+    # gini_df = pd.DataFrame.from_records(gini_indices, index="block_number")
+    df = pd.DataFrame(
+        {'block_number': list(range(start_block + step_size, end_block, step_size)),
+         'gini_index': gini_indices,
+         'tx_per_block': txs_per_block
+         })
     if file_output is not None:
-        gini_df.to_csv(file_output)
-    return gini_df
+        df.to_csv(file_output)
+    return df
 
 
-def create_timeline_plot(data):
-    data.plot(x='block_number', y='gini_index', kind='line')
+def create_timeline_plot(data, y):
+    data.plot(x='block_number', y=y, kind='line')
 
 # def main(args):
 #     if args.file_balances is None or args.file_original is None:
