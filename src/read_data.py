@@ -158,7 +158,6 @@ def get_past_logs_thread(w3, address, topic, file_path, start_block, end_block, 
             from_block = to_block + 1
             to_block = from_block + step_size
 
-        # ValueError is used to get earliest from_block value
         except ValueError as ve:
             print('ValueError: ', ve)
             num_value_errors = num_value_errors + 1
@@ -167,86 +166,32 @@ def get_past_logs_thread(w3, address, topic, file_path, start_block, end_block, 
             print('Error getting logs: ', e)
             break
 
+def get_block_number_of_first_log(w3, address, topic, end_block):
 
-# old function
-# get transaction by hash
-def get_past_logs(w3, address, topic, start_block, end_block, file_path):
-    done = False
-    # result = pd.DataFrame()
-    num_of_blocks = 0
+    from_block = int(0)
+    to_block = int(end_block)
 
-    from_block = "earliest" if start_block is None else int(start_block)
-    # to_block = analysis_end_block
-    to_block = from_block + step_size
-    while True: #num_of_blocks < block_run_limit:
-        try:
-            start = time.time_ns()
-            if type(from_block) is not str and from_block >= end_block:
-                break
-            if to_block > end_block:
-                to_block = end_block
+    try:
+        filter = {
+            'fromBlock': from_block,
+            'toBlock': to_block,
+            'address': address,
+            'topics': [topic]
+        }
 
-            filter = {
-                'fromBlock': from_block,
-                'toBlock': to_block,
-                'address': address,
-                'topics': [topic]
-            }
+        print(f"from block: {from_block}; to block: {to_block};")
+        print(f"number of blocks: {to_block - from_block}")
 
-            print(f"from block: {from_block}; to block: {to_block};")
-            if type(from_block) is not str and type(to_block) is not str:
-                print(f"number of blocks: {to_block - from_block}")
-            logs = w3.eth.get_logs(filter)
+        w3.eth.get_logs(filter)
 
-            end_request = time.time_ns()
-
-            if type(from_block) is not str and type(to_block) is not str:
-                num_of_blocks = num_of_blocks + (to_block - from_block)
-
-            df = pd.DataFrame()
-
-            print(f'logs: {len(logs)}')
-            for l in logs:
-                filtered_log = {
-                    'tx_hash': [l['transactionHash'].hex()],
-                    'block_number': [l['blockNumber']],
-                    'from': [l['topics'][1].hex()],
-                    'to': [l['topics'][2].hex()],
-                    'amount': [get_uint(l['data'].hex()[2:])]
-                }
-                new_df = pd.DataFrame.from_dict(filtered_log)
-                df = pd.concat([df, new_df])
-
-                # result = pd.concat([result, new_df])
-                # print("0x" + bytes.hex(l["transactionHash"]))
-
-            df.to_csv(file_path, index=False, header=False, mode='a')
-            end_total = time.time_ns()
-
-            print(f'Time for request: {(end_request - start) / 1_000_000} ms')
-            print(f'Time total: {(end_total - start) / 1_000_000} ms')
-            print(f'Total number of bloks: {num_of_blocks}')
-            print('\n')
-
-            if to_block == end_block:
-                break
-            from_block = to_block + 1
-            # to_block = analysis_end_block
-            to_block = from_block + step_size
-
-        # ValueError is used to get earliest from_block value
-        except ValueError as ve:
-            print('ValueError: ', ve)
-            # from_block = int(ve.args[0]["data"]["from"], 16)
-            # to_block = int(ve.args[0]["data"]["to"], 16)
-            # to_block = from_block + step_size
-            break
-        except RuntimeError as e:
-            print('Error getting logs: ', e)
-            break
-
-    print(f"Last block: {from_block - 1}")
-    # return result
+    # ValueError is used to get earliest from_block value
+    except ValueError as ve:
+        print('ValueError: ', ve)
+        # print(ve.args.get)
+        suggested_start_block = str(ve.args).split("'from': '")[1].split("'")[0]
+        print("Suggested start block: ", int(suggested_start_block, 16))
+    except RuntimeError as e:
+        print('Error getting logs: ', e)
 
 
 def get_uint(data):
@@ -261,17 +206,16 @@ def split_data(data):
     return [data[i:i + 64] for i in range(2, len(data), 64)]
 
 def main(args):
-    start_block = int(args.start_block)
     end_block = int(args.end_block)
-
-    if start_block is None or end_block is None:
-        print('Error: start block and end block must be specified')
 
     start_time = time.time()
     if args.topic is None:
         print('Error: topic not specified')
     if args.address is None:
         print('Error: address not specified')
+
+    if end_block is None:
+        print('Error: end block must be specified')
 
     if args.output is None:
         print('Error: no output file specified')
@@ -286,6 +230,16 @@ def main(args):
     # connect to the Ethereum node
     if config["keys"]["infura_apikey"] is not None:
         eth_con = conETH(config["keys"]["infura_apikey"])
+
+        # get start block if none_specified
+        if args.start_block is None:
+            print('Expect ValueError...')
+            get_block_number_of_first_log(eth_con, args.address, args.topic, args.end_block)
+            print('Error: start block must be specified')
+            return
+
+        start_block = int(args.start_block)
+
         # make the query
         if eth_con is not None:
             # --- old code for get_past_logs ---
@@ -309,7 +263,7 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--address',
                         help='Filter for the contract address', type=str, required=True)
     parser.add_argument('--start-block',
-                        help='Start block for the filter operation', type=str, required=True)
+                        help='Start block for the filter operation', type=str, required=False)
     parser.add_argument('--end-block',
                         help='End block for the filter operation', type=str, required=True)
     parser.add_argument('-t', '--topic',
