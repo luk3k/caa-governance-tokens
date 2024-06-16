@@ -47,7 +47,7 @@ def print_cex_percentages(df):
     cex_sum = df_cex_not_none["balance"].sum()
     others_sum = df_cex_is_none["balance"].sum()
 
-    print(f"All cex together hold {cex_sum} out of {sum} ({round((cex_sum / sum) * 100, 2)} %) tokens")
+    print(f"\nAll cex together hold {cex_sum} out of {sum} ({round((cex_sum / sum) * 100, 2)} %) tokens")
     print(f"Other addresses hold {others_sum} out of {sum} ({round((others_sum / sum) * 100, 2)} %) tokens")
 
 
@@ -81,10 +81,20 @@ def print_top_percentages(df):
 
 
 def print_top_traders(df):
+
     top_receivers = df.sort_values(by="amount_in", ascending=False).iloc[:10]
     top_senders = df.sort_values(by="amount_out", ascending=False).iloc[:10]
-    print(f"Top senders: {top_senders[['address', 'balance', 'cex']]}")
-    print(f"Top receivers: {top_receivers[['address', 'balance', 'cex']]}\n")
+    print(f"\nTop senders: ")
+    print(f"{top_senders[['address', 'balance', 'cex']]}")
+    print(f"\nTop receivers: ")
+    print(f"{top_receivers[['address', 'balance', 'cex']]}")
+
+    top_senders_transfer_frequency = df.sort_values(by="transfer_frequency_out", ascending=False).iloc[:10]
+    top_receivers_transfer_frequency = df.sort_values(by="transfer_frequency_in", ascending=False).iloc[:10]
+    print(f"\nMost active senders: ")
+    print(f"{top_senders_transfer_frequency[['address', 'balance', 'transfer_frequency_out', 'cex']]}")
+    print(f"\nMost active receivers: ")
+    print(f"{top_receivers_transfer_frequency[['address', 'balance', 'transfer_frequency_in', 'cex']]}\n")
 
 
 def print_tokens_per_block(file):
@@ -96,8 +106,10 @@ def print_tokens_per_block(file):
 
     r = end_block - start_block
     tx_per_block = row_count / r
+    transfer_frequency = r / row_count
 
-    print(f"Token transfers per block: {round(tx_per_block, 2)}\n")
+    print(f"\nToken transfers per block: {round(tx_per_block, 2)}")
+    print(f"Transfer frequency: {round(transfer_frequency, 2)}")
 
 
 # https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
