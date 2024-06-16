@@ -150,6 +150,7 @@ def create_and_export_timeline(file_original, step_size, file_output=None):
     end_block = df.iloc[-1]["block_number"]
     gini_indices = []
     txs_per_block = []
+    hhis = []
     prev_block = start_block - 1
     for block in range(start_block + step_size, end_block, step_size):
         print(f"[Timeline][Block {block}]: Calculating balances ...")
@@ -172,6 +173,11 @@ def create_and_export_timeline(file_original, step_size, file_output=None):
         tx_per_block = df[(df['block_number'] > prev_block) & (df['block_number'] <= block)].shape[0] / (block - prev_block)
         txs_per_block.append(tx_per_block)
         print(f"Timeline][Block {block}]: Done Calculating tx per block: {tx_per_block}")
+
+        print(f"Timeline][Block {block}]: Calculating hhi ...")
+        hhi = compute_herfindahl_hirschman_index(only_positive_df_removed_timelockAddress)
+        hhis.append(hhi)
+        print(f"[Timeline][Block {block}]: Done calculating hhi: {hhi}")
         prev_block = block
 
     print(f"[Timeline]: Done")
@@ -179,7 +185,8 @@ def create_and_export_timeline(file_original, step_size, file_output=None):
     df = pd.DataFrame(
         {'block_number': list(range(start_block + step_size, end_block, step_size)),
          'gini_index': gini_indices,
-         'tx_per_block': txs_per_block
+         'tx_per_block': txs_per_block,
+         'hhi': hhis
          })
     if file_output is not None:
         df.to_csv(file_output)
