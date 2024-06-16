@@ -17,12 +17,21 @@ def create_balance_df(file, end_block=19955500):
 
 
 def compute_address_balances(df, at=None):
+    num_transfers_total = df.shape[0]
     if at is not None:
         df = df[df["block_number"] <= at]
-    to_group = df.groupby(['to']).agg({'amount': 'sum'})
+    to_group = df.groupby(['to']).agg(
+        amount=('amount', 'sum'),
+        transfer_frequency=('amount', 'count')      # transfer count
+    )
+    to_group['transfer_frequency'] = to_group['transfer_frequency'] / num_transfers_total
     to_group.index.names = ['address']
     # print("to unique: ", to_group.nunique())
-    from_group = df.groupby(['from']).agg({'amount': 'sum'})
+    from_group = df.groupby(['from']).agg(
+        amount=('amount', 'sum'),
+        transfer_frequency=('amount', 'count')      # transfer count
+    )
+    from_group['transfer_frequency'] = from_group['transfer_frequency'] / num_transfers_total
     from_group.index.names = ['address']
     # print("from unique: ", from_group.nunique())
 
