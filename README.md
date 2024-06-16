@@ -1,5 +1,29 @@
-**# caa-governance-tokens
+# caa-governance-tokens
 Analyse governance token flows for selected etheureum DeFi protocols
+
+## Usage of scripts
+
+### `read_data.py`:
+
+Parameters:
+- -a ... address
+- -t ... topic
+- -o ... output file
+- --start-block
+- --end-block
+
+Option 1: Don't specify `--start-block` to discover the suggested start block:
+```
+python read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_fromBlock_X_toBlock_Y --end-block 19966660
+```
+
+Option 2: Specify `--start-block` and `--end-block` to fetch all log events:
+```
+python read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_2_fromBlock_6620856_toBlock_8620856 --start-block 6620856 --end-block 8620856
+```
+
+
+## Tokens and data
 
 End block: 19966660
 
