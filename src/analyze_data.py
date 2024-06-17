@@ -11,21 +11,22 @@ from preprocess_data import compute_address_balances, clean_data, remove_zero_ba
 pd.options.display.max_colwidth = 68
 
 
-def create_pie_chart(df, output_path, labels=None):
+def create_pie_chart(df, output_path, labels=None, show_legend=False):
     plt.figure()
     data = df["balance"].to_numpy()
     if labels is None:
-        addresses = df["address"].apply(lambda x: x.replace("000000000000000000000000", "")).apply(lambda x: x[0:7])
+        addresses = df["address"].apply(lambda x: x[0:7])
         labels = addresses
 
     colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(labels))
     wedges, texts = plt.pie(data,
                             labels=labels,
                             colors=colors)
-    # plt.legend(wedges, addresses,
-    #            loc="center left",
-    #            bbox_to_anchor=(1.04, 0.5),
-    #            borderaxespad=0)
+    if show_legend:
+        plt.legend(wedges, labels,
+                   loc="center left",
+                   bbox_to_anchor=(1.2, 0.5),
+                   borderaxespad=0)
 
     plt.savefig(output_path)
 
@@ -97,7 +98,7 @@ def print_top_traders(df):
     print(f"{top_receivers_transfer_frequency[['address', 'balance', 'transfer_frequency_in', 'cex']]}\n")
 
 
-def print_tokens_per_block(file):
+def print_transfer_frequency(file):
     with open(file, mode='r') as f1:
         lines = f1.readlines()
         row_count = len(lines) - 1
@@ -105,24 +106,26 @@ def print_tokens_per_block(file):
         end_block = int(lines[-1].split(',')[1])
 
     r = end_block - start_block
-    tx_per_block = row_count / r
-    transfer_frequency = r / row_count
+    transfer_frequency = row_count / r
 
-    print(f"\nToken transfers per block: {round(tx_per_block, 2)}")
-    print(f"Transfer frequency: {round(transfer_frequency, 2)}")
+    print(f"\nTransfer frequency: {round(transfer_frequency, 2)}")
 
 
 # https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
 # measures the maket concentration: lower degree means closer to perfect distribution, higher degree means monopol
 def compute_herfindahl_hirschman_index(df, top_n_player=None):
+    num_players = df.shape[0]
     if top_n_player is None:
-        top_n_player = df.shape[0]
+        top_n_player = num_players
     # df must be sorted!
     balances = df["balance"].to_numpy()
     total = balances.sum()
     hhi_elements = [(value / total) ** 2 for value in balances[:top_n_player]]
-    hhi = sum(hhi_elements)
-    return hhi
+    hhi = float(sum(hhi_elements))
+    print("hhi: ", hhi)
+    hhi_normalized = (hhi - (1/num_players)) / ( 1 - (1/num_players))
+    print("hhi_normalized: ", hhi_normalized)
+    return hhi_normalized
 
 
 def compute_gini_index(df):
@@ -142,7 +145,7 @@ def gini(x):
 
     # alternative (same as in wikipedia)
     # gini = float((2 * np.sum(index * x)) / (n * np.sum(x))) - ((n+1)/n)
-    return ((np.sum((2 * index - n - 1) * x)) / (n * np.sum(x)))
+    return float(((np.sum((2 * index - n - 1) * x)) / (n * np.sum(x))))
 
 
 def merge_others_at_cut_off_value(df, cut_point):
@@ -154,7 +157,7 @@ def merge_others_at_cut_off_value(df, cut_point):
     return pd.concat([df_prepared, row], ignore_index=True)
 
 
-def create_and_export_timeline(file_original, step_size, file_output=None):
+def create_and_export_timeline(file_original, step_size, file_output=None, addresses_to_remove=[]):
     df = pd.read_csv(file_original)
     df["amount"] = df["amount"].apply(Decimal)
 
@@ -173,11 +176,12 @@ def create_and_export_timeline(file_original, step_size, file_output=None):
         # clean
         non_negative_df = clean_data(df_balances)
         only_positive_df = remove_zero_balances(non_negative_df)
-        only_positive_df_removed_timelockAddress = remove_address(only_positive_df,
-                                                                  "0x1a9c8182c09f50c8318d769245bea52c32be35bc")
+        only_positive_df_removed_addresses = only_positive_df
+        for addr in addresses_to_remove:
+            only_positive_df_removed_addresses = remove_address(only_positive_df, addr)
 
         print(f"Timeline][Block {block}]: Calculating gini ...")
-        gini_index = compute_gini_index(only_positive_df_removed_timelockAddress)
+        gini_index = compute_gini_index(only_positive_df_removed_addresses)
         gini_indices.append(gini_index)
         print(f"[Timeline][Block {block}]: Done calculating gini: {gini_index}")
 
@@ -187,7 +191,7 @@ def create_and_export_timeline(file_original, step_size, file_output=None):
         print(f"Timeline][Block {block}]: Done Calculating tx per block: {tx_per_block}")
 
         print(f"Timeline][Block {block}]: Calculating hhi ...")
-        hhi = compute_herfindahl_hirschman_index(only_positive_df_removed_timelockAddress)
+        hhi = compute_herfindahl_hirschman_index(only_positive_df_removed_addresses)
         hhis.append(hhi)
         print(f"[Timeline][Block {block}]: Done calculating hhi: {hhi}")
         prev_block = block

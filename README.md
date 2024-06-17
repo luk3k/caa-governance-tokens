@@ -16,12 +16,12 @@ Example usage:
 
 Option 1: Don't specify `--start-block` to discover the suggested start block:
 ```
-python src/read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_fromBlock_X_toBlock_Y --end-block 19966660
+python src/read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_fromBlock_X_toBlock_Y.csv --end-block 19966660
 ```
 
 Option 2: Specify `--start-block` and `--end-block` to fetch all log events in the given range:
 ```
-python src/read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_2_fromBlock_6620856_toBlock_8620856 --start-block 6620856 --end-block 8620856
+python src/read_data.py -a 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2 -t 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef -o data/outputMKR_2_fromBlock_6620856_toBlock_8620856.csv --start-block 6620856 --end-block 8620856
 ```
 
 ### merge_csv_files.py
@@ -48,7 +48,7 @@ Uniswap (UNI Token):
 DAI (MKR Token):
 - Transfer event signature: `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`
 - Token Holder chart: https://etherscan.io/token/tokenholderchart/0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2
-- MKR Token: https://etherscan.io/address/0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2**
+- MKR Token: https://etherscan.io/address/0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2
 - Start block: 4620855
 - Fetch data:
   - Range of blocks: 15.345.805
@@ -63,5 +63,17 @@ DAI (MKR Token):
     - number of value errors: 0 
     - Total time: 948.4589004516602 s
   - 4th: 10620858 - 14620858
+    - number of value errors: 0 
+    - Total time: 2095.733283996582 s
+  - 5th: 14620859 - 17620859
+    - number of value errors: 0
+    - Total time: 3196.321580171585 s
+  - 6th: 17620860 - 19966660
+    - TODO
 
-
+Lido (LDO Token):
+- Transfer event signature: `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`
+- Token Holder chart: https://etherscan.io/token/tokenholderchart/0x5a98fcbea516cf06857215779fd812ca3bef1b32
+- LDO token: https://etherscan.io/address/0x5a98fcbea516cf06857215779fd812ca3bef1b32
+- Start block: TODO
+- Fetch data: TODO
