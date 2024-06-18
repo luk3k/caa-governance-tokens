@@ -32,7 +32,7 @@ Parameters:
 
 Example usage:
 ```
-python src/merge_csv_files.py --files test_file_1.csv test_file_2.csv test_file_3.csv --final_file test_merged.csv
+python src/merge_csv_files.py --files test_file_1.csv test_file_2.csv test_file_3.csv --final-file test_merged.csv
 ```
 
 ## Tokens and data
@@ -69,11 +69,16 @@ DAI (MKR Token):
     - number of value errors: 0
     - Total time: 3196.321580171585 s
   - 6th: 17620860 - 19966660
-    - TODO
+    - number of value errors: 0 
+    - Total time: 1177.8922624588013 s
 
 Lido (LDO Token):
+- Address: `0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32`
 - Transfer event signature: `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`
 - Token Holder chart: https://etherscan.io/token/tokenholderchart/0x5a98fcbea516cf06857215779fd812ca3bef1b32
-- LDO token: https://etherscan.io/address/0x5a98fcbea516cf06857215779fd812ca3bef1b32
-- Start block: TODO
-- Fetch data: TODO
+- LDO token: https://etherscan.io/address/0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32
+- Start block: 11473276
+- Fetch data: 19966660
+- 1st run: 11473276 - 19966660
+  - number of value errors: 0 
+  - Total time: 2159.270416021347 s

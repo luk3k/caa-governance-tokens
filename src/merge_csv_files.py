@@ -36,7 +36,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--files', nargs='+',
                         help='Paths for input files', type=str, required=True)
-    parser.add_argument('--final_file',
+    parser.add_argument('--final-file',
                         help='Path for final file', type=str, required=True)
 
     args = parser.parse_args()
