@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 import pandas as pd
 import numpy as np
+from matplotlib.ticker import ScalarFormatter
+
 from preprocess_data import compute_address_balances, clean_data, remove_zero_balances, remove_address
 
 pd.options.display.max_colwidth = 68
@@ -183,6 +185,22 @@ def create_timeline_plot(data):
 def get_top_by_balances(data, n):
     df = data.sort_values(by="balance", ascending=False)
     return df.head(n)
+
+
+def create_distribution_plot(data, key):
+    df = pd.DataFrame(data)
+    df.sort_values(by=key, ascending=True, inplace=True)
+    df[key] = df[key].astype(float)
+
+    fig, axs = plt.subplots(figsize=(12, 4))
+
+    df.plot.hist(column=key, bins=100, ax=axs)
+
+    axs.set_title(f"Distribution by {key}")
+    axs.set_yscale("log")
+    axs.set_xlabel("")
+    # axs.tick_params(axis='x', labelrotation=80)
+    plt.show()
 
 
 def create_balance_cdf_plot(data):
