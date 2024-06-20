@@ -45,7 +45,7 @@ def compute_address_balances(df, at=None):
 
 
 def parse_html(html_file):
-    HTMLFile = open(html_file, "r")
+    HTMLFile = open(html_file, "r", encoding="utf-8")
     index = HTMLFile.read()
     soup = BeautifulSoup(index, 'lxml')
     exchanges = {}
