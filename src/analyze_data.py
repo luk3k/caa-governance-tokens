@@ -14,13 +14,14 @@ pd.options.display.max_colwidth = 68
 
 
 def create_pie_chart(df, output_path, labels=None, show_legend=False):
-    plt.figure()
+    plt.figure(figsize=(12, 4))
     data = df["balance"].to_numpy()
     if labels is None:
-        addresses = df["address"].apply(lambda x: x[0:7])
+        addresses = df["address"].apply(lambda x: x[0:7] + "...")
         labels = addresses
 
-    colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(labels))
+    # colors = random.choices(list(mcolors.CSS4_COLORS.values()), k=len(labels))
+    colors = ["#575757", "#b2b08f", "#17726d", "#eae4d2", "#f6f6f6", "#ffc700"]
     wedges, texts = plt.pie(data,
                             labels=labels,
                             colors=colors)
@@ -29,16 +30,17 @@ def create_pie_chart(df, output_path, labels=None, show_legend=False):
                    loc="center left",
                    bbox_to_anchor=(1.2, 0.5),
                    borderaxespad=0)
+        plt.tight_layout()
 
-    plt.savefig(output_path)
+    plt.savefig(output_path, transparent=True)
 
 
 def create_bar_chart(df, output_path):
-    plt.figure()
+    plt.figure(figsize=(12, 4))
     addresses = df["address"]
     data = df["balance"].to_numpy()
-    plt.barh(addresses, data)
-    plt.savefig(output_path)
+    plt.barh(addresses, data, color="#17726d")
+    plt.savefig(output_path, transparent=True)
 
 
 def print_cex_percentages(df):
@@ -84,7 +86,10 @@ def print_top_percentages(df):
 
 
 def print_top_traders(df):
-
+    group = df.groupby(['cex']).agg(
+        {'balance': 'sum', 'amount_in': 'sum', 'amount_out': 'sum', 'transfer_frequency_out': 'mean',
+         'transfer_frequency_in': 'mean'})
+    group.index.names = ['cex']
     top_receivers = df.sort_values(by="amount_in", ascending=False).iloc[:10]
     top_senders = df.sort_values(by="amount_out", ascending=False).iloc[:10]
     print(f"\nTop senders: ")
@@ -125,7 +130,7 @@ def compute_herfindahl_hirschman_index(df, top_n_player=None):
     hhi_elements = [(value / total) ** 2 for value in balances[:top_n_player]]
     hhi = float(sum(hhi_elements))
     print("hhi: ", hhi)
-    hhi_normalized = (hhi - (1/num_players)) / ( 1 - (1/num_players))
+    hhi_normalized = (hhi - (1 / num_players)) / (1 - (1 / num_players))
     print("hhi_normalized: ", hhi_normalized)
     return hhi_normalized
 
@@ -188,7 +193,8 @@ def create_and_export_timeline(file_original, step_size, file_output=None, addre
         print(f"[Timeline][Block {block}]: Done calculating gini: {gini_index}")
 
         print(f"Timeline][Block {block}]: Calculating tx per block ...")
-        tx_per_block = df[(df['block_number'] > prev_block) & (df['block_number'] <= block)].shape[0] / (block - prev_block)
+        tx_per_block = df[(df['block_number'] > prev_block) & (df['block_number'] <= block)].shape[0] / (
+                    block - prev_block)
         txs_per_block.append(tx_per_block)
         print(f"Timeline][Block {block}]: Done Calculating tx per block: {tx_per_block}")
 
@@ -211,8 +217,19 @@ def create_and_export_timeline(file_original, step_size, file_output=None, addre
     return df
 
 
-def create_timeline_plot(data, y):
-    data.plot(x='block_number', y=y, kind='line')
+def create_timeline_plot(data, y, output_path):
+    fig, axs = plt.subplots(figsize=(4, 4))
+    # y_columns = ['gini_index', 'tx_per_block', 'hhi']
+    # axs.set_yscale("log")
+    if y is "gini_index":
+        color = "#17726d"
+    elif y is "tx_per_block":
+        color = "#ffc700"
+    else:
+        color = "#575757"
+
+    data.plot(x='block_number', y=y, kind='line', ax=axs, color=color)
+    fig.savefig(output_path, transparent=True)
 
 
 def get_top_by_balances(data, n):
@@ -220,38 +237,38 @@ def get_top_by_balances(data, n):
     return df.head(n)
 
 
-def create_distribution_plot(data, key):
+def create_distribution_plot(data, key, output_path):
     df = pd.DataFrame(data)
     df.sort_values(by=key, ascending=True, inplace=True)
     df[key] = df[key].astype(float)
 
     fig, axs = plt.subplots(figsize=(12, 4))
 
-    df.plot.hist(column=key, bins=100, ax=axs)
+    df.plot.hist(column=key, bins=100, ax=axs, color="#17726d")
 
     axs.set_title(f"Distribution by {key}")
     axs.set_yscale("log")
     axs.set_xlabel("")
     # axs.tick_params(axis='x', labelrotation=80)
+    fig.savefig(output_path, transparent=True)
     plt.show()
 
 
-def create_balance_cdf_plot(data):
+def create_balance_cdf_plot(data, output_path):
     df = pd.DataFrame(data)
     df.sort_values(by="balance", ascending=True, inplace=True)
     df["balance"] = df["balance"].astype(float)
     df["cumulative_sum"] = df["balance"].cumsum()
 
     fig, axs = plt.subplots(figsize=(12, 4))
-    df.plot(x="address", y="cumulative_sum", kind="line", ax=axs)
+    df.plot(x="address", y="cumulative_sum", kind="line", ax=axs, color="#17726d")
 
     axs.set_xlabel("Address")
     axs.set_ylabel("cdf")
     axs.set_xticks([])
     axs.set_yticks([])
+    fig.savefig(output_path, transparent=True)
     plt.show()
-
-
 
 # def main(args):
 #     if args.file_balances is None or args.file_original is None:
