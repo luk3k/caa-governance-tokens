@@ -10,5 +10,5 @@ dependencies:
   - web3=6.0.0
   - pyyaml=6.0
   - matplotlib=3.8.4
-  - lxml=5.5.2
+  - lxml
 #  - networkx=2.8.4
