@@ -87,18 +87,22 @@ def print_top_percentages(df):
 
 def print_top_traders(df):
     group = df.groupby(['cex']).agg(
-        {'balance': 'sum', 'amount_in': 'sum', 'amount_out': 'sum', 'transfer_frequency_out': 'mean',
-         'transfer_frequency_in': 'mean'})
+        {'balance': 'sum', 'amount_in': 'sum', 'amount_out': 'sum', 'transfer_frequency_out': 'sum',
+         'transfer_frequency_in': 'sum'})
     group.index.names = ['cex']
-    top_receivers = df.sort_values(by="amount_in", ascending=False).iloc[:10]
-    top_senders = df.sort_values(by="amount_out", ascending=False).iloc[:10]
+    df_aggregated = group.reset_index()
+    df_aggregated = df_aggregated[~pd.isnull(df_aggregated['cex'])]
+    df_aggregated = df_aggregated.append(df[pd.isnull(df['cex'])])
+
+    top_receivers = df_aggregated.sort_values(by="amount_in", ascending=False).iloc[:10]
+    top_senders = df_aggregated.sort_values(by="amount_out", ascending=False).iloc[:10]
     print(f"\nTop senders: ")
     print(f"{top_senders[['address', 'balance', 'cex']]}")
     print(f"\nTop receivers: ")
     print(f"{top_receivers[['address', 'balance', 'cex']]}")
 
-    top_senders_transfer_frequency = df.sort_values(by="transfer_frequency_out", ascending=False).iloc[:10]
-    top_receivers_transfer_frequency = df.sort_values(by="transfer_frequency_in", ascending=False).iloc[:10]
+    top_senders_transfer_frequency = df_aggregated.sort_values(by="transfer_frequency_out", ascending=False).iloc[:10]
+    top_receivers_transfer_frequency = df_aggregated.sort_values(by="transfer_frequency_in", ascending=False).iloc[:10]
     print(f"\nMost active senders: ")
     print(f"{top_senders_transfer_frequency[['address', 'balance', 'transfer_frequency_out', 'cex']]}")
     print(f"\nMost active receivers: ")
@@ -221,9 +225,9 @@ def create_timeline_plot(data, y, output_path):
     fig, axs = plt.subplots(figsize=(4, 4))
     # y_columns = ['gini_index', 'tx_per_block', 'hhi']
     # axs.set_yscale("log")
-    if y is "gini_index":
+    if y == "gini_index":
         color = "#17726d"
-    elif y is "tx_per_block":
+    elif y == "tx_per_block":
         color = "#ffc700"
     else:
         color = "#575757"
