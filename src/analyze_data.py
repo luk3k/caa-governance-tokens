@@ -96,17 +96,28 @@ def print_top_traders(df):
 
     top_receivers = df_aggregated.sort_values(by="amount_in", ascending=False).iloc[:10]
     top_senders = df_aggregated.sort_values(by="amount_out", ascending=False).iloc[:10]
+
+    top_receivers["balance"] = top_receivers["balance"].apply(int)
+    top_receivers["amount_in"] = top_receivers["amount_in"].apply(int)
+
+    top_senders["balance"] = top_senders["balance"].apply(int)
+    top_senders["amount_out"] = top_senders["amount_out"].apply(int)
+
     print(f"\nTop senders: ")
-    print(f"{top_senders[['address', 'balance', 'cex']]}")
+    print(f"{top_senders[['address', 'amount_out', 'balance', 'cex', ]]}")
     print(f"\nTop receivers: ")
-    print(f"{top_receivers[['address', 'balance', 'cex']]}")
+    print(f"{top_receivers[['address', 'amount_in', 'balance', 'cex']]}")
 
     top_senders_transfer_frequency = df_aggregated.sort_values(by="transfer_frequency_out", ascending=False).iloc[:10]
     top_receivers_transfer_frequency = df_aggregated.sort_values(by="transfer_frequency_in", ascending=False).iloc[:10]
+
+    top_senders_transfer_frequency["balance"] = top_senders_transfer_frequency["balance"].apply(int)
+    top_receivers_transfer_frequency["balance"] = top_receivers_transfer_frequency["balance"].apply(int)
+
     print(f"\nMost active senders: ")
-    print(f"{top_senders_transfer_frequency[['address', 'balance', 'transfer_frequency_out', 'cex']]}")
+    print(f"{top_senders_transfer_frequency[['address', 'transfer_frequency_out', 'balance', 'cex']]}")
     print(f"\nMost active receivers: ")
-    print(f"{top_receivers_transfer_frequency[['address', 'balance', 'transfer_frequency_in', 'cex']]}\n")
+    print(f"{top_receivers_transfer_frequency[['address', 'transfer_frequency_in', 'balance', 'cex']]}\n")
 
 
 def print_transfer_frequency(file):
@@ -222,7 +233,7 @@ def create_and_export_timeline(file_original, step_size, file_output=None, addre
 
 
 def create_timeline_plot(data, y, output_path):
-    fig, axs = plt.subplots(figsize=(4, 4))
+    fig, axs = plt.subplots(figsize=(12, 4))
     # y_columns = ['gini_index', 'tx_per_block', 'hhi']
     # axs.set_yscale("log")
     if y == "gini_index":
