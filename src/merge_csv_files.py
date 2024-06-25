@@ -2,8 +2,8 @@ import csv
 import os
 from argparse import ArgumentParser
 
-# merge file1 and file2 to final_file
-# Requirement: both files contain the same header
+# merge csv files to final_file
+# Requirement: all files contain the same header
 def merge_two_csv_files(files, final_file):
 
     if os.path.exists(final_file):

@@ -11,10 +11,7 @@ from requests.exceptions import HTTPError
 with open('config.yaml') as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
-# analysis_end_block = 19955500
-
 num_value_errors = 0
-block_run_limit = 50_000
 nThreads = 8
 step_size = 100 # 200 result in a value error for some requests
 
@@ -98,8 +95,6 @@ def perform_get_logs_with_too_many_requests_protection(w3, filter, thread_num):
                 time.sleep(sleeping_time)
                 sleeping_time *= 2
 
-            # time.sleep(sleeping_time)
-            # sleeping_time *= 2
             continue
         done = True
     return result
@@ -220,13 +215,6 @@ def main(args):
     if args.output is None:
         print('Error: no output file specified')
 
-    # --- old code for get_past_logs ---
-    # # init csv headers
-    # if args.start_block is None:
-    #     with open(args.output, 'w') as f:
-    #         f.write("tx_hash,block_number,from,to,amount\n")
-    # ---
-
     # connect to the Ethereum node
     if config["keys"]["infura_apikey"] is not None:
         eth_con = conETH(config["keys"]["infura_apikey"])
@@ -242,10 +230,6 @@ def main(args):
 
         # make the query
         if eth_con is not None:
-            # --- old code for get_past_logs ---
-            # get_past_logs(eth_con, args.address, args.topic, analysis_start_block_testing, analysis_end_block, file_path=args.output)
-            # ---
-
             get_past_logs_threaded(eth_con, args.address, args.topic, args.output, nThreads, start_block, end_block)
         else:
             print("Error: connection to the ethereum node failed")
